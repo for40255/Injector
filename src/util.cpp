@@ -2,6 +2,10 @@
 
 #include <commdlg.h>
 #include <random>
+#include <thread>
+#include <tlhelp32.h>
+#include <iostream>
+
 
 std::optional<std::string> util::SelectFile(const char* filter, const char* title)
 {
@@ -62,4 +66,25 @@ std::string util::ShuffleDllName(const std::string& path)
 	std::shuffle(filename.begin(), filename.end(), g);
 
 	return directory + filename + extension;
+}
+
+HANDLE util::GetProcessHandleByWindowName(const char* WindowClassName, const char* WindowName)
+{
+	printf("\nWaiting for game to launcher...\n");
+
+	HWND hwnd = nullptr;
+	while (!(hwnd = FindWindowA(WindowClassName, WindowName)))
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	}
+
+	DWORD dwProcID;
+	while (!(GetWindowThreadProcessId(hwnd, &dwProcID)) || dwProcID == NULL)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	}
+
+	const auto handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwProcID);
+
+	return handle;
 }

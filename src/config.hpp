@@ -43,7 +43,7 @@ public:
 		ini.SetValue("Config", "LaunchOptions", LaunchOptions.c_str());
 		ini.SetValue("Config", "DLLPath_1", DLLPath_1.c_str());
 		ini.SetValue("Config", "DLLPath_2", DLLPath_2.c_str());
-		ini.SetValue("Config", "DLLPath_3", DLLPath_3.c_str(), "//Will wait game launcher done");
+		ini.SetValue("Config", "DLLPath_3", DLLPath_3.c_str());
 		
 		auto rc = ini.SaveFile(path);
 		return rc >= 0;
