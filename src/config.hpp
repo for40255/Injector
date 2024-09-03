@@ -11,8 +11,9 @@ public:
 	std::string DLLPath_1;
 	std::string DLLPath_2;
 	std::string DLLPath_3;
+	std::string ManualMap;
 
-	Config() : GamePath(""), LaunchOptions(""), DLLPath_1(""), DLLPath_2(""), DLLPath_3("") {}
+	Config() : GamePath(""), LaunchOptions(""), DLLPath_1(""), DLLPath_2(""), DLLPath_3(""), ManualMap("") {}
 
 	bool Load(const char* path)
 	{
@@ -30,6 +31,7 @@ public:
 		DLLPath_1 = ini.GetValue("Config", "DLLPath_1", "");
 		DLLPath_2 = ini.GetValue("Config", "DLLPath_2", "");
 		DLLPath_3 = ini.GetValue("Config", "DLLPath_3", "");
+		ManualMap = ini.GetValue("Config", "UseManualMap", "");
 
 		return true;
 	}
@@ -44,7 +46,8 @@ public:
 		ini.SetValue("Config", "DLLPath_1", DLLPath_1.c_str());
 		ini.SetValue("Config", "DLLPath_2", DLLPath_2.c_str());
 		ini.SetValue("Config", "DLLPath_3", DLLPath_3.c_str());
-		
+		ini.SetValue("Config", "UseManualMap", "0");
+
 		auto rc = ini.SaveFile(path);
 		return rc >= 0;
 	}

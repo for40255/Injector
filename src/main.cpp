@@ -42,6 +42,7 @@ int main()
 		{
 			config.GamePath = gamePathOpt.value();
 			std::cout << "Game Path Selected: " << config.GamePath << std::endl;
+			std::cout << std::endl;
 		}
 
 		auto dllPathOpt = util::SelectFile("DLL Files (*.dll)\0*.dll\0", "Select the first DLL to inject");
@@ -49,6 +50,7 @@ int main()
 		{
 			config.DLLPath_1 = dllPathOpt.value();
 			std::cout << "DLL Path 1 Selected: " << config.DLLPath_1 << std::endl;
+			std::cout << std::endl;
 		}
 
 		config.Save(configPath.c_str());
@@ -57,6 +59,7 @@ int main()
 	{
 		std::cout << "Config loaded successfully" << std::endl;
 		std::cout << "Path to game: " << config.GamePath << std::endl;
+		std::cout << std::endl;
 	}
 
 	CoUninitialize();
@@ -69,26 +72,61 @@ int main()
 		return 1;
 	}
 
-	if (!config.DLLPath_1.empty())
+	if (!config.ManualMap.empty() && config.ManualMap == "1")
 	{
-		auto shuffledPath = util::ShuffleDllName(config.DLLPath_1);
-		std::cout << "Shuffled DLL 1 path: " << shuffledPath << std::endl;
+		std::cout << std::endl;
+		std::cout << "Use ManualMap" << std::endl;
+		std::cout << std::endl;
 
-		if(!Inject(hProcess, config.DLLPath_1))
-			system("pause");
+		if (!config.DLLPath_1.empty())
+		{
+			auto shuffledPath = util::ShuffleDllName(config.DLLPath_1);
+			std::cout << "Shuffled DLL 1 path: " << shuffledPath << std::endl;
+
+			if (!Inject(hProcess, config.DLLPath_1, InjectionType::ManualMap))
+				system("pause");
+		}
+
+		if (!config.DLLPath_2.empty())
+		{
+			if (!Inject(hProcess, config.DLLPath_2, InjectionType::ManualMap))
+				system("pause");
+		}
+
+		if (!config.DLLPath_3.empty())
+		{
+			if (!Inject(hProcess, config.DLLPath_3, InjectionType::ManualMap))
+				system("pause");
+		}
+	}
+	else
+	{
+		std::cout << std::endl;
+		std::cout << "Use LoadLibrary" << std::endl;
+		std::cout << std::endl;
+
+		if (!config.DLLPath_1.empty())
+		{
+			auto shuffledPath = util::ShuffleDllName(config.DLLPath_1);
+			std::cout << "Shuffled DLL 1 path: " << shuffledPath << std::endl;
+
+			if (!Inject(hProcess, config.DLLPath_1))
+				system("pause");
+		}
+
+		if (!config.DLLPath_2.empty())
+		{
+			if (!Inject(hProcess, config.DLLPath_2))
+				system("pause");
+		}
+
+		if (!config.DLLPath_3.empty())
+		{
+			if (!Inject(hProcess, config.DLLPath_3))
+				system("pause");
+		}
 	}
 
-	if (!config.DLLPath_2.empty())
-	{
-		if (!Inject(hProcess, config.DLLPath_2))
-			system("pause");
-	}
-	
-	if (!config.DLLPath_3.empty())
-	{
-		if (!Inject(hProcess, config.DLLPath_3))
-			system("pause");
-	}
 
 	Sleep(2000);
 	ResumeThread(hThread);

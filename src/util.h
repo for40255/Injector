@@ -13,6 +13,4 @@ namespace util
 	std::string ShuffleDllName(const std::string& path);
 
 	HANDLE GetProcessHandleByWindowName(const char* WindowClassName, const char* WindowName = nullptr);
-	int FindProcessId(const std::string& processName);
-	void WaitForCloseProcess(const std::string& processName);
 }
