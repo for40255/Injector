@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<head> 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Local Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.js" type="application/javascript"></script>
+  <link href="https://cdn.jsdelivr.net/npm/p2p-dplayer@latest/dist/DPlayer.min.css" type="text/css" rel="stylesheet">
+  <style>
+    body { background: #000; margin: 0; padding: 0; width: 100dvw; height: 100svh; display: flex; justify-content: center; align-items: center; }
+    .container { width: 100%; height: 100%; }
+    .dplayer { width: 100% !important; height: 100% !important; }
+    .overlay { position:fixed; top:0; left:0; width:100dvw; height:calc(100svh - 50px); z-index:99999; cursor:pointer; background-color: rgba(0,0,0,0); justify-content: center; align-items: center; display: none;}
+    video { width: 100%; height: 100%; object-fit: contain; }
+
+    .overlay.play, .overlay.cycle { display: flex !important; }
+    .overlay.play .play_button { display: block; }
+    .overlay.cycle .cycle{ display: block; }
+    
+    .play_button, .cycle { display: none; }
+    .play-button { display: none; }
+    .cycle { display: none; }
+
+    .dplayer-mobile-play.hide{ display: none !important; }
+    .dplayer-mobile-play { width: 80px; height: 80px;}
+  </style>
+</head>
+<body>
+
+<div class="overlay">
+  <svg class="play_button" width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" >
+      <circle cx="50" cy="50" r="48" stroke="white" stroke-width="4" fill="rgba(0,0,0,0.3)"/>
+      <path d="M40 35V65L65 50L40 35Z" fill="white"/>
+  </svg>
+  <svg class="cycle" width="60" height="60" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" stroke="white">
+    <g fill="none" fill-rule="evenodd">
+      <g transform="translate(1 1)" stroke-width="3">
+      <circle stroke-opacity=".3" cx="18" cy="18" r="18"/>
+      <path d="M36 18c0-9.94-8.06-18-18-18">
+        <animateTransform
+          attributeName="transform"
+          type="rotate"
+          from="0 18 18"
+          to="360 18 18"
+          dur="0.8s"
+          repeatCount="indefinite"/>
+      </path>
+      </g>
+    </g>
+  </svg>
+</div>
+
+<div class="container">
+  <div id="dplayer" playsinline></div>
+</div>
+
+<script>
+  const OVERLAY_ = document.querySelector('.overlay');
+  const source = ""
+  let MAX_TRY_NUM = 10;
+  let CURR_TRY_NUM = 0;
+  
+  const match = window.location.search.match(/[?&]url=([^&]+)/);
+  let ATTACHURL = match ? match[1] : null;
+
+  window.addEventListener("load", (event) => {
+    const dp = new DPlayer({
+      container: document.getElementById('dplayer'),
+      video: { url: '', type: 'hls'},
+      chromecast: true,
+      contextmenu: [
+        {text: '子母畫面',click: (player) => {player.video.requestPictureInPicture();},
+      },],
+      preload: 'auto',
+      //autoplay: true
+    })
+
+    if (dp) {
+      var dp_play_icon = document.querySelector(".dplayer-mobile-play");
+      showPlayButton()
+      dp_play_icon.classList.add('hide');
+      addPipButton(dp)
+
+      if (ATTACHURL) initDplayer(dp, ATTACHURL)
+      else {
+        OVERLAY_.addEventListener('click', () => { 
+          alert("請在URL加上?url=XX.m3u8");
+        }); 
+      }
+    }
+    console.log("page is fully loaded");
+  });
+
+  
+  function initDplayer(dp, url) {
+    enableUrlCopy(dp);
+    const dp_play_icon = document.querySelector(".dplayer-mobile-play");
+    showPlayButton()
+
+    OVERLAY_.addEventListener('click', () => { 
+      loadSource(dp, url)
+      //showLoadingCycle()
+      dp_play_icon.classList.remove('hide');
+      OVERLAY_.style.zIndex = -99999;
+      hideEverything()
+    }, { once: true }); 
+
+    dp.on('canplay', () => {
+
+    });
+
+    dp.on('playing', () => {
+      //console.log('playing')
+      CURR_TRY_NUM = 0
+    });
+
+    dp.on('error', (event) => {
+      console.error("發生播放錯誤，類型:", event);
+      if (CURR_TRY_NUM < MAX_TRY_NUM) {
+        CURR_TRY_NUM += 1
+        console.warn(`第 ${CURR_TRY_NUM} 次嘗試重新連線...`);
+        dp.notice(`第 ${CURR_TRY_NUM} 次嘗試重新連線...`)
+        setTimeout(() => {
+          loadSource(dp, ATTACHURL)
+        }, 500);
+      } else {
+        alert(`已到達最大重試次數:${MAX_TRY_NUM} 結束連線 該網址可能無效或無法播放`);
+      }
+    });
+    
+    window.dp = dp;
+  }
+
+  function loadSource(dp, url){
+    dp.switchVideo({url: url}); 
+    dp.options.video.url = url
+    dp.play();
+  }
+
+  function showPlayButton() {
+    OVERLAY_.classList.remove('cycle');
+    OVERLAY_.classList.add('play');
+  }
+
+  function showLoadingCycle() {
+    OVERLAY_.classList.remove('play');
+    OVERLAY_.classList.add('cycle');
+  }
+
+  function hideEverything() {
+    OVERLAY_.classList.remove('play', 'cycle');
+  }
+
+  function addPipButton(dp) {
+    // 1. 找到控制條右側圖示的容器
+    const rightIcons = dp.template.container.querySelector('.dplayer-icons.dplayer-icons-right');
+    
+    // 如果找不到控制條（有些版本或設定下會隱藏），就跳出
+    if (!rightIcons) return;
+    
+    // 2. 建立一個新的 span 作為按鈕容器
+    const pipBtn = document.createElement('span');
+    // 給它 DPlayer 標準的圖示類別，讓它看起來跟其他按鈕一致
+    pipBtn.className = 'dplayer-icon dplayer-pip-icon'; 
+    // 為了滑鼠懸停顯示文字 (Tooltip)，我們用 title
+    pipBtn.title = '畫中畫'; 
+    pipBtn.setAttribute('data-balloon', '子母畫面');
+    pipBtn.setAttribute('data-balloon-pos', 'up');
+
+    // 3. 塞入上面的 SVG 代碼 (將文字內容替換成 SVG)
+    pipBtn.innerHTML = `
+        <span class="dplayer-icon-content">
+          <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 32 32">
+            <path fill="currentColor" d="M28 2H4C2.895 2 2 2.895 2 4v24c0 1.105 0.895 2 2 2h24c1.105 0 2-0.895 2-2V4c0-1.105-0.895-2-2-2zM26 26H6V6h20v20z"/>
+            <path fill="currentColor" d="M26 26v-8h-8v8h8z"/>
+          </svg>
+        </span>
+    `;
+
+    // 4. 點擊事件：觸發畫中畫功能
+    pipBtn.addEventListener('click', () => {
+        if (document.pictureInPictureElement) {
+            document.exitPictureInPicture();
+        } else if (dp.video.requestPictureInPicture) {
+            dp.video.requestPictureInPicture();
+        } else {
+            alert('此瀏覽器不支援畫中畫功能');
+        }
+    });
+
+    // 5. 插入到控制條最前面
+    rightIcons.insertBefore(pipBtn, rightIcons.firstChild);
+  } 
+
+  function copyToClipboardLegacy(text) {
+    // 1. 建立一個暫時的 textarea
+    const textArea = document.createElement("textarea");
+    
+    // 2. 將 textarea 設定為「不可見」但保持在 DOM 中
+    // 使用絕對定位並移出螢幕可視區，避免閃爍或影響佈局
+    textArea.style.position = "fixed";
+    textArea.style.top = "0";
+    textArea.style.left = "-9999px"; 
+    textArea.style.width = "2em";
+    textArea.style.height = "2em";
+    textArea.style.padding = "0";
+    textArea.style.border = "none";
+    textArea.style.outline = "none";
+    textArea.style.boxShadow = "none";
+    textArea.style.background = "transparent";
+    
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    
+    // 3. 執行選取與複製
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        // 使用 document.execCommand('copy') 強制執行複製
+        const successful = document.execCommand('copy');
+        if (successful) {
+            console.log('複製成功');
+            return true
+        } else {
+            console.error('複製失敗');
+        }
+    } catch (err) {
+        console.error('無法複製:', err);
+    }
+    
+    // 4. 清理：移除臨時元素
+    document.body.removeChild(textArea);
+
+    return false;
+  }
+
+  function enableUrlCopy(dp) {
+    // 等待面板 DOM 渲染完成
+    const infoPanel = dp.template.infoPanel;
+    
+    infoPanel.addEventListener('click', (e) => {
+      const urlData = e.target.closest('.dplayer-info-panel-item-url .dplayer-info-panel-item-data');
+      
+      if (urlData) {
+        const textToCopy = urlData.innerText;
+        
+        if (copyToClipboardLegacy(textToCopy)) {
+          const originalText = urlData.innerText;
+          urlData.innerText = '✅ 已複製到剪貼簿！';
+          urlData.style.color = '#00a1d6';
+          
+          setTimeout(() => {
+              urlData.innerText = originalText;
+              urlData.style.color = '';
+          }, 2000);
+        }
+      }
+      
+    });
+
+  }
+
+</script>
+</body>
+</html>
